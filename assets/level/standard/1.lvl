@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<level width="800" height="480" time="30" star1Cap="1" star2Cap="3" star3Cap="5">    
+    <ball x="500" y="200" color="#cc0000" velocity="4" direction="1.2" />
+    <ball x="600" y="200" color="#cc0000" velocity="4" direction="1.2" />
+    <ball x="600" y="100" color="#0000cc" velocity="3" direction="2.2" />
+</level>

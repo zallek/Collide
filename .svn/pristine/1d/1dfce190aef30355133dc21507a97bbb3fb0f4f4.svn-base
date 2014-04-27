@@ -1,0 +1,25 @@
+package com.zallek.collide.db.category;
+
+public class Category {
+	// Notez que l'identifiant est un long
+	private Long id;
+	private String name;
+	
+	public Category(Long id, String name) {
+		super();
+		this.id = id;
+		this.name = name;
+	}
+	
+	public Category(String name) {
+		this(null, name);
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public String getName() {
+		return name;
+	}
+}

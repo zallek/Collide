@@ -1,0 +1,24 @@
+package com.zallek.collide.game.dialog;
+
+import org.andengine.engine.camera.Camera;
+import org.andengine.opengl.vbo.VertexBufferObjectManager;
+
+import com.zallek.collide.scene.GameScene;
+
+public class QuitDialog extends ConfirmDialog 
+{
+	public QuitDialog(GameScene scene, Camera camera, VertexBufferObjectManager pSpriteVertexBufferObject) {
+		super("Quit", scene, camera, pSpriteVertexBufferObject);
+	}
+
+	@Override
+	protected void OnAcceptClick() {
+		scene.backToMenu();
+	}
+
+
+	@Override
+	protected void OnCancelClick() {
+		
+	}
+}

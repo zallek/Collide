@@ -1,0 +1,54 @@
+package com.zallek.collide.game.dialog;
+
+import org.andengine.engine.camera.Camera;
+import org.andengine.entity.sprite.Sprite;
+import org.andengine.opengl.vbo.VertexBufferObjectManager;
+
+import com.zallek.collide.manager.ResourcesManager;
+import com.zallek.collide.scene.GameScene;
+
+public class GameDialog extends Sprite
+{
+	protected GameScene scene;
+	protected Camera camera;
+	static protected boolean visible = false;
+	
+    public GameDialog(GameScene scene, Camera camera, VertexBufferObjectManager pSpriteVertexBufferObject)
+    {
+        super(0, 0, 400, 250, ResourcesManager.getInstance().game_dialog_region, pSpriteVertexBufferObject);
+        this.scene = scene;
+        this.camera = camera;
+    }
+    
+    public final void setVisible(boolean visible)
+    {
+		if(visible) {
+			if(scene.isStarted() && !GameDialog.visible) {
+				display();
+				GameDialog.visible = true;
+			}
+		}
+		else {
+			if(GameDialog.visible) {
+				hide();
+				GameDialog.visible = false;
+			}
+		}
+    }
+    
+    public boolean getVisible() {
+    	return visible;
+    }
+    
+    private void display() {
+    	scene.pause();
+        setPosition(camera.getCenterX(), camera.getCenterY());
+        scene.attachChild(this);
+    }
+    
+    private void hide() 
+    {
+    	this.detachSelf();
+    	scene.resume();
+    }
+}
