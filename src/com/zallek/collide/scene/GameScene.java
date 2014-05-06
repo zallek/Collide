@@ -62,10 +62,14 @@ public class GameScene extends BaseScene implements GameStateManagement
 	private Text scoreText;
 	private CountText timeText;
 	
+	//Game variables
+	private int lifes; //TODO manage lifes
+	private int score;
+	private long timeElapsed;
+	
 	//Utils
-	private Score score;
+	private long startTime;
 	private GameState state = GameState.INIT;
-	private int timeValue;
 
 	
 	 //**** Initialization ****//
@@ -74,7 +78,7 @@ public class GameScene extends BaseScene implements GameStateManagement
     public void createScene()
     {
 		state = GameState.INIT;
-		score = new Score();
+		//score = new Score();
 		setTouchAreaBindingOnActionDownEnabled(true);
 	
 		createBackground();
@@ -85,6 +89,11 @@ public class GameScene extends BaseScene implements GameStateManagement
 	    
 		loadLevel(1);
 	    start();
+	    
+	    lifes = 0;
+		score = 0;
+		timeElapsed = 0;
+		
 	    state = GameState.RUNNING;
     }
 	
@@ -150,21 +159,20 @@ public class GameScene extends BaseScene implements GameStateManagement
 
     private void setScore(int score)
     {
-        this.score.setScore(score);
+        this.score = score;
         scoreText.setText(resourcesManager.getRessourcesString(R.string.score) + score);
     }
     
-    private void displayTimeText()
+    private void setLifes(int lifes)
     {
-    	timeText = new CountText(0, 0, resourcesManager.font, timeValue, 0, new CountTextOptions(), vbom){
-			@Override
-			public void onFinished() {
-				finish();
-			}
-        };
-        timeText.setPosition(camera.getCenterX(), camera.getCenterY());
-        timeText.setScale(4);
-        attachChild(timeText);
+    	this.lifes = lifes;
+    	//TODO ADD VISUAL HUD
+    }
+    
+    private void setTimeElapsed(long time)
+    {
+    	this.timeElapsed = time;
+    	calculateScore();
     }
     
     
@@ -179,10 +187,7 @@ public class GameScene extends BaseScene implements GameStateManagement
         	@Override
 			public IEntity onLoadEntity(final String pEntityName, final Attributes pAttributes) 
         	{
-                timeValue = SAXUtils.getIntAttributeOrThrow(pAttributes, XmlLevelConstants.TAG_LEVEL_ATTRIBUTE_TIME);
-                score.addCap(1, SAXUtils.getIntAttributeOrThrow(pAttributes, XmlLevelConstants.TAG_LEVEL_ATTRIBUTE_STAR1CAP));
-                score.addCap(2, SAXUtils.getIntAttributeOrThrow(pAttributes, XmlLevelConstants.TAG_LEVEL_ATTRIBUTE_STAR2CAP));
-                score.addCap(3, SAXUtils.getIntAttributeOrThrow(pAttributes, XmlLevelConstants.TAG_LEVEL_ATTRIBUTE_STAR3CAP));
+        		setLifes(SAXUtils.getIntAttributeOrThrow(pAttributes, XmlLevelConstants.TAG_LEVEL_ATTRIBUTE_LIFE_INIT));
                 
                 return GameScene.this;
             }
@@ -202,13 +207,7 @@ public class GameScene extends BaseScene implements GameStateManagement
                 final float velocity = SAXUtils.getFloatAttributeOrThrow(pAttributes, XmlLevelConstants.TAG_BALL_ATTRIBUTE_VELOCITY);
                 final float direction = SAXUtils.getFloatAttributeOrThrow(pAttributes, XmlLevelConstants.TAG_BALL_ATTRIBUTE_DIRECTION);
                 
-                Ball ball = new Ball(x, y, color, GameScene.this, physicsWorld){
-					@Override
-					public void onChanged() {
-						calculateScore();
-					}
-                };
-                ball.setVelocityAndDirection(velocity, direction);
+                Ball ball = addBall(x, y, color, velocity, direction);
                 ball.pause();
                 
                 return ball;
@@ -216,7 +215,7 @@ public class GameScene extends BaseScene implements GameStateManagement
         });
 
         try {
-        	levelLoader.loadLevelFromAsset(activity.getAssets(), "level/standard/" + levelID + ".lvl");
+        	levelLoader.loadLevelFromAsset(activity.getAssets(), "level/" + levelID + ".lvl");
         }
         catch(IOException e){
         	Debug.e(e);
@@ -225,6 +224,16 @@ public class GameScene extends BaseScene implements GameStateManagement
         }
     }
     
+    public Ball addBall(float x, float y, int color, double velocity, double direction){
+    	Ball ball = new Ball(x, y, color, GameScene.this, physicsWorld){
+			@Override
+			public void onChanged() {
+				calculateScore();
+			}
+        };
+        ball.setLinearVelocity(velocity, direction);
+        return ball;
+    }
     
     //**** Listeners ****//
     
@@ -256,27 +265,18 @@ public class GameScene extends BaseScene implements GameStateManagement
 	            final Object x2 = contact.getFixtureB().getBody().getUserData();
 	            if(x1 != null && x2 != null){
 	            	if(x1 instanceof Ball && x2 instanceof Ball){
-		            	Ball.ballCollision((Ball) x1, (Ball) x2);
+		            	Ball.onBallCollision((Ball) x1, (Ball) x2);
 		            }
 	            }
             }
 
-            public void endContact(Contact contact)
-            {
-                
-            }
+            public void endContact(Contact contact){}
 
 			@Override
-			public void preSolve(Contact contact, Manifold oldManifold) 
-			{
-				
-			}
+			public void preSolve(Contact contact, Manifold oldManifold){}
 
 			@Override
-			public void postSolve(Contact contact, ContactImpulse impulse) 
-			{
-				
-			}
+			public void postSolve(Contact contact, ContactImpulse impulse){}
         };
         return contactListener;
     }
@@ -285,33 +285,24 @@ public class GameScene extends BaseScene implements GameStateManagement
     //**** Game activity management ****//
     
     public void start() {
-    	displayTimeText();
-    	
-    	final float wait_time = 2;
-    	final float transition_time = 1;
-    	
-    	engine.registerUpdateHandler(new TimerHandler(wait_time, new ITimerCallback() 
-    	{
-    		public void onTimePassed(final TimerHandler pTimerHandler) 
-    		{
-    			timeText.registerEntityModifier(new ScaleModifier(transition_time, 4, 1));
-    			timeText.registerEntityModifier(new MoveModifier(transition_time, camera.getCenterX(), camera.getCenterY(), GameConstants.CAMERA_WIDTH - 50, GameConstants.CAMERA_HEIGHT - 30));
-    			engine.registerUpdateHandler(new TimerHandler(transition_time, new ITimerCallback() 
-    	    	{
-    	    		public void onTimePassed(final TimerHandler pTimerHandler) 
-    	    		{
-		    			timeText.start();
-		    			resume();
-    	    		}
-    	    	}));
-    		}
-    	}));
+    	timeText = new CountText(0, 0, resourcesManager.font, 0, GameConstants.GAME_START_WAIT, new CountTextOptions(), vbom){
+			@Override
+			public void onFinished() {
+				timeText.setVisible(false);
+				resume();
+			}
+        };
+        timeText.setPosition(camera.getCenterX(), camera.getCenterY());
+        timeText.setScale(4);
+        attachChild(timeText);
+        
+        timeText.start();
     }
     
     //TODO Doit bloquer l'action sur les balls et boutons HUD aussi
     public void pause() {
+    	setTimeElapsed(System.currentTimeMillis() - startTime);
     	Ball.pauseAllBalls();
-    	timeText.pause();
     	camera.getHUD().unregisterTouchArea(pause_button);
     	camera.getHUD().unregisterTouchArea(reset_button);
     	setIgnoreUpdate(true);
@@ -323,7 +314,8 @@ public class GameScene extends BaseScene implements GameStateManagement
     	camera.getHUD().registerTouchArea(pause_button);
     	camera.getHUD().registerTouchArea(reset_button);
     	Ball.resumeAllBalls();
-    	timeText.resume();
+    	startTime = System.currentTimeMillis();
+    	
     	state = GameState.RUNNING;
     }
     
@@ -337,7 +329,6 @@ public class GameScene extends BaseScene implements GameStateManagement
     {
     	levelCompleteWindow.display(this, camera);
         camera.getHUD().setVisible(false);
-        timeText.setVisible(false);
         
         setIgnoreUpdate(true);
     	pause();
@@ -350,11 +341,11 @@ public class GameScene extends BaseScene implements GameStateManagement
     private void calculateScore() {
     	int newScore = 0;
 		for(Ball b : Ball.getBallsList()){
-			newScore += Math.pow(b.getSize(), 1.5);
+			newScore += Math.pow(b.getSize(), 0.5);
 		}
-		newScore = Math.round(newScore);
-
-		setScore(newScore);
+		newScore += timeElapsed;
+		
+		setScore(Math.round(newScore));
 		finishIfNoBall();
     }
     

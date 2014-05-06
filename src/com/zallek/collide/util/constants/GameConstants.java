@@ -7,6 +7,8 @@ public class GameConstants
 	public static final float CAMERA_WIDTH = 1280;
 	public static final float CAMERA_HEIGHT = 768;
 	
+	public static final int GAME_START_WAIT = 3;
+	
 	public static final float MIN_TOUCH_RADIUS = 60;
 	public static final float BALL_SCALE = 2;
 }

@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.andengine.engine.camera.Camera;
 import org.andengine.entity.primitive.Line;
-import org.andengine.entity.scene.Scene;
 import org.andengine.entity.sprite.Sprite;
 import org.andengine.extension.physics.box2d.PhysicsConnector;
 import org.andengine.extension.physics.box2d.PhysicsFactory;
@@ -18,32 +17,30 @@ import org.andengine.util.math.MathUtils;
 import android.util.Log;
 
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
+import com.badlogic.gdx.physics.box2d.BodyPolar;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.zallek.collide.manager.ResourcesManager;
+import com.zallek.collide.scene.GameScene;
 import com.zallek.collide.util.constants.GameConstants;
 
 public abstract class Ball extends Sprite {
 	
 	private static List<Ball> balls = new ArrayList<Ball>();
 	
-	private Scene scene;
+	private GameScene scene;
 	private PhysicsWorld physicsWorld;
 	private static final FixtureDef FIXTURE_DEF = PhysicsFactory.createFixtureDef(0, 0, 0, true);
 	
 	private boolean touchedFlag = false;
 	
 	private Line lineDirection;
-	private Body body;
+	private BodyPolar body;
 	
 	private int size = 0;
 	private Color type;
-	
-	private float velocity = 0;
-	private double direction = 0;
 
-	public Ball(final float pX, final float pY, int color, Scene scene, PhysicsWorld physicsWorld) {
+	public Ball(final float pX, final float pY, int color, GameScene scene, PhysicsWorld physicsWorld) {
 		super(pX, pY, ResourcesManager.getInstance().particule_region, ResourcesManager.getInstance().vbom);
 		this.scene = scene;
 		this.physicsWorld = physicsWorld;
@@ -69,7 +66,7 @@ public abstract class Ball extends Sprite {
 	
 	private void createPhysics(final Camera camera, PhysicsWorld physicsWorld)
     {        
-		body = PhysicsFactory.createCircleBody(physicsWorld, this, BodyType.DynamicBody, FIXTURE_DEF);
+		body = (BodyPolar) PhysicsFactory.createCircleBody(physicsWorld, this, BodyType.DynamicBody, FIXTURE_DEF);
 		body.setUserData(this);
 		this.setUserData(body);
         
@@ -81,11 +78,11 @@ public abstract class Ball extends Sprite {
                 super.onUpdate(pSecondsElapsed);
                 camera.onUpdate(0.1f); //helps to reduce camera "jitering" effect while moving
                 
-                //Go outside
+                //Detect out_side
                 if (getY() <= 0 || getY() > (camera.getHeight() + mHeight)
                 		|| getX() <= 0 || getX() > (camera.getWidth() + mWidth))
                 {           
-                    remove();
+                	onLeaveFrame();
                 }
             }
         });
@@ -93,8 +90,12 @@ public abstract class Ball extends Sprite {
 	
 	public abstract void onChanged();
 	
+
+	/** Events **/
 	
-	/** Listener **/
+	private void onLeaveFrame(){
+		 remove();
+	}
 	
 	public boolean onAreaTouched(final TouchEvent pSceneTouchEvent, final float pTouchAreaLocalX, final float pTouchAreaLocalY) {
 		
@@ -115,35 +116,38 @@ public abstract class Ball extends Sprite {
 			this.touchedFlag = false;
 			this.lineDirection.detachSelf();
 			
-			this.setDirection(pTouchAreaLocalX, pTouchAreaLocalY);
+			this.setAngle(pTouchAreaLocalX, pTouchAreaLocalY);
 		}
 		return true;
 	}
 	
-	static public void ballCollision(Ball b1, Ball b2){
+	static public void onBallCollision(Ball b1, Ball b2){
 		if(b1.type.equals(b2.type)) { //FUSION
 			b1.setSize(b1.size + b2.size);
+			b1.setLinearVelocity(b1.getLinearVelocity().add(b2.getLinearVelocity()));
+			b1.setPosition(com.zallek.collide.util.math.Math.mean(b1.getX(), b2.getX()),
+					com.zallek.collide.util.math.Math.mean(b1.getY(), b2.getY()));
 			b2.remove();
 		}
 		else {
-			if(b1.size >= b2.size){ //b is destroyed
+			if(b1.size >= b2.size){ //b2 is destroyed
 				b1.setSize(b1.size - b2.size);
+				b1.setLinearVelocity(b1.getLinearVelocity().add(b2.getLinearVelocity()));
+				b1.setPosition(com.zallek.collide.util.math.Math.mean(b1.getX(), b2.getX()),
+						com.zallek.collide.util.math.Math.mean(b1.getY(), b2.getY()));
 				b2.remove();
 			}
-			else { //this is destroyed
+			else { //b1 is destroyed
 				b2.setSize(b2.size - b1.size);
-				b2.remove();
+				b2.setLinearVelocity(b2.getLinearVelocity().add(b1.getLinearVelocity()));
+				b2.setPosition(com.zallek.collide.util.math.Math.mean(b1.getX(), b2.getX()),
+						com.zallek.collide.util.math.Math.mean(b1.getY(), b2.getY()));
+				b1.remove();
 			}
 		}
 	}
 
-	//Touch area size modified to make easier to touch small balls
-	@Override
-	public boolean contains(float pX, float pY) {
-		final float radius = Math.max(GameConstants.MIN_TOUCH_RADIUS, this.getWidth()/2);
-		return MathUtils.distance(this.getX(), this.getY(), pX, pY) < radius;
-	}
-	
+
 	
 	/** Publics methods **/
 	
@@ -153,7 +157,7 @@ public abstract class Ball extends Sprite {
 	}
 	
 	public void resume() {
-		setVelocityAndDirection(this.velocity, this.direction);
+		body.setAwake(true);
 		scene.registerTouchArea(this);
 	}
 	
@@ -174,46 +178,25 @@ public abstract class Ball extends Sprite {
 	}
 	
 	
-	/** Getters & Getters **/
+	/** Getters & Setters **/
 	
-	public void setDirection(double direction){
-		setVelocityAndDirection(this.velocity, direction);
+	public void setAngle(float x, float y){
+		body.setAngle(x, y);
 	}
 	
-	public void setDirection(float x, float y){
-		if(x > 0){
-			setDirection(Math.atan(y/x));
-		}
-		else if(x < 0 && y >= 0){
-			setDirection(Math.atan(y/x) + Math.PI);
-		}
-		else if(x < 0 && y < 0){
-			setDirection(Math.atan(y/x) - Math.PI);
-		}
-		else if(x == 0 && y > 0){
-			setDirection(Math.PI/2);
-		}
-		else if(x == 0 && y < 0){
-			setDirection(Math.PI/2*-1);
-		}
-		
-		setVelocityAndDirection(this.velocity, direction);
+	public Vector2 getLinearVelocity(){
+		return body.getLinearVelocity();
 	}
 	
-	public void setVelocity(float velocity){
-		setVelocityAndDirection(velocity, this.direction);
+	public void setLinearVelocity(Vector2 lv){
+		body.setLinearVelocity(lv);
 	}
 	
-	public void setVelocityAndDirection(float velocity, double direction){
-		this.velocity = velocity;
-		this.direction = direction;
-		
-		final float pX = (float) (Math.cos(direction) * velocity);
-		final float pY = (float) (Math.sin(direction) * velocity);
-		
-		body.setLinearVelocity(new Vector2(pX, pY)); 
+	public void setLinearVelocity(double velocity, double angle){
+		body.setLinearVelocity(velocity, angle);
 	}
 
+	
 	public int getSize() {
 		return this.size;
 	}
@@ -240,6 +223,16 @@ public abstract class Ball extends Sprite {
 	private void setType(Color color){
 		this.type = color;
 		setColor(color);
+	}
+	
+	
+	/** Override behaviors **/
+	
+	//Touch area size modified to make easier to touch small balls
+	@Override
+	public boolean contains(float pX, float pY) {
+		final float radius = Math.max(GameConstants.MIN_TOUCH_RADIUS, this.getWidth()/2);
+		return MathUtils.distance(this.getX(), this.getY(), pX, pY) < radius;
 	}
 	
 	
