@@ -9,6 +9,10 @@ public class BodyPolar extends Body {
 		super(world, addr);
 	}
 	
+	public BodyPolar(Body b){
+		super(b.getWorld(), b.addr);
+	}
+	
 	//TODO VERIFY THE BEHAVIOR OF THE NATIVE METHOD
 	/*public double getAngle(){
 		return toAngle(getLinearVelocity().x, getLinearVelocity().y);

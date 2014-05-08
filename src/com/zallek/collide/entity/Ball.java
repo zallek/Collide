@@ -33,6 +33,7 @@ public abstract class Ball extends Sprite {
 	private static final FixtureDef FIXTURE_DEF = PhysicsFactory.createFixtureDef(0, 0, 0, true);
 	
 	private boolean touchedFlag = false;
+	private Vector2 linearVelocity = new Vector2();
 	
 	private Line lineDirection;
 	private BodyPolar body;
@@ -66,7 +67,7 @@ public abstract class Ball extends Sprite {
 	
 	private void createPhysics(final Camera camera, PhysicsWorld physicsWorld)
     {        
-		body = (BodyPolar) PhysicsFactory.createCircleBody(physicsWorld, this, BodyType.DynamicBody, FIXTURE_DEF);
+		body = new BodyPolar(PhysicsFactory.createCircleBody(physicsWorld, this, BodyType.DynamicBody, FIXTURE_DEF));
 		body.setUserData(this);
 		this.setUserData(body);
         
@@ -125,23 +126,20 @@ public abstract class Ball extends Sprite {
 		if(b1.type.equals(b2.type)) { //FUSION
 			b1.setSize(b1.size + b2.size);
 			b1.setLinearVelocity(b1.getLinearVelocity().add(b2.getLinearVelocity()));
-			b1.setPosition(com.zallek.collide.util.math.Math.mean(b1.getX(), b2.getX()),
-					com.zallek.collide.util.math.Math.mean(b1.getY(), b2.getY()));
+			b1.setPosition((b1.getX() + b2.getX())/2,(b1.getY() + b2.getY())/2);
 			b2.remove();
 		}
 		else {
 			if(b1.size >= b2.size){ //b2 is destroyed
 				b1.setSize(b1.size - b2.size);
 				b1.setLinearVelocity(b1.getLinearVelocity().add(b2.getLinearVelocity()));
-				b1.setPosition(com.zallek.collide.util.math.Math.mean(b1.getX(), b2.getX()),
-						com.zallek.collide.util.math.Math.mean(b1.getY(), b2.getY()));
+				b1.setPosition((b1.getX() + b2.getX())/2,(b1.getY() + b2.getY())/2);
 				b2.remove();
 			}
 			else { //b1 is destroyed
 				b2.setSize(b2.size - b1.size);
 				b2.setLinearVelocity(b2.getLinearVelocity().add(b1.getLinearVelocity()));
-				b2.setPosition(com.zallek.collide.util.math.Math.mean(b1.getX(), b2.getX()),
-						com.zallek.collide.util.math.Math.mean(b1.getY(), b2.getY()));
+				b2.setPosition((b1.getX() + b2.getX())/2,(b1.getY() + b2.getY())/2);
 				b1.remove();
 			}
 		}
@@ -151,13 +149,16 @@ public abstract class Ball extends Sprite {
 	
 	/** Publics methods **/
 	
-	public void pause() {
+	public void pause() {		
+		linearVelocity = body.getLinearVelocity();
+		body.setLinearVelocity(0, 0);
 		body.setAwake(false);
 		scene.unregisterTouchArea(this);
 	}
 	
 	public void resume() {
 		body.setAwake(true);
+		body.setLinearVelocity(linearVelocity);
 		scene.registerTouchArea(this);
 	}
 	

@@ -85,7 +85,7 @@ public class GameScene extends BaseScene implements GameStateManagement
 	    createHUD();
 	    createPhysics();
 	    
-	    levelCompleteWindow = new LevelCompleteWindow(score, vbom);
+	    //levelCompleteWindow = new LevelCompleteWindow(score, vbom);
 	    
 		loadLevel(1);
 	    start();
@@ -285,7 +285,7 @@ public class GameScene extends BaseScene implements GameStateManagement
     //**** Game activity management ****//
     
     public void start() {
-    	timeText = new CountText(0, 0, resourcesManager.font, 0, GameConstants.GAME_START_WAIT, new CountTextOptions(), vbom){
+    	timeText = new CountText(0, 0, resourcesManager.font, GameConstants.GAME_START_WAIT, 0, new CountTextOptions(), vbom){
 			@Override
 			public void onFinished() {
 				timeText.setVisible(false);
@@ -301,7 +301,7 @@ public class GameScene extends BaseScene implements GameStateManagement
     
     //TODO Doit bloquer l'action sur les balls et boutons HUD aussi
     public void pause() {
-    	setTimeElapsed(System.currentTimeMillis() - startTime);
+    	setTimeElapsed(timeElapsed + System.currentTimeMillis() - startTime);
     	Ball.pauseAllBalls();
     	camera.getHUD().unregisterTouchArea(pause_button);
     	camera.getHUD().unregisterTouchArea(reset_button);
@@ -327,7 +327,7 @@ public class GameScene extends BaseScene implements GameStateManagement
     
     public void finish() 
     {
-    	levelCompleteWindow.display(this, camera);
+    	//levelCompleteWindow.display(this, camera);
         camera.getHUD().setVisible(false);
         
         setIgnoreUpdate(true);
@@ -343,7 +343,7 @@ public class GameScene extends BaseScene implements GameStateManagement
 		for(Ball b : Ball.getBallsList()){
 			newScore += Math.pow(b.getSize(), 0.5);
 		}
-		newScore += timeElapsed;
+		//newScore += timeElapsed;
 		
 		setScore(Math.round(newScore));
 		finishIfNoBall();
