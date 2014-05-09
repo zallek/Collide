@@ -4,6 +4,8 @@
     <string name="app_name">Collide</string>
     <string name="loading">Loading&#8230;</string>
 	<string name="score">Score :&#160;</string>
+	<string name="timeElapsed">Time elasped :&#160;</string>
+	<string name="totalScore">Total score :&#160;</string>
 	<string name="levelComplete">Level Complete !</string>
 	<string name="levelFailed">Failed</string>
 	<string name="quitDialog">Quit</string>

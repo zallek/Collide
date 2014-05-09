@@ -6,8 +6,6 @@ import java.util.Iterator;
 import org.andengine.engine.camera.hud.HUD;
 import org.andengine.engine.handler.IUpdateHandler;
 import org.andengine.entity.IEntity;
-import org.andengine.entity.modifier.MoveModifier;
-import org.andengine.entity.modifier.ScaleModifier;
 import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.sprite.ButtonSprite;
 import org.andengine.entity.sprite.ButtonSprite.OnClickListener;
@@ -43,6 +41,7 @@ import com.zallek.collide.manager.SceneManager.SceneType;
 import com.zallek.collide.util.constants.GameConstants;
 import com.zallek.collide.util.constants.XmlLevelConstants;
 import com.zallek.collide.util.game.GameStateManagement;
+import com.zallek.collide.util.score.Score;
 import com.zallek.collide.scene.GameScene;
 
 public class GameScene extends BaseScene implements GameStateManagement
@@ -66,8 +65,8 @@ public class GameScene extends BaseScene implements GameStateManagement
 	
 	//Game variables
 	private int lifes; //TODO manage lifes
-	private int score;
-	private long timeElapsed;
+	private Score score;
+	//private long timeElapsed;
 	
 	//Utils
 	private long startTime;
@@ -80,21 +79,20 @@ public class GameScene extends BaseScene implements GameStateManagement
     public void createScene()
     {
 		state = GameState.INIT;
-		//score = new Score();
+		score = new Score();
 		setTouchAreaBindingOnActionDownEnabled(true);
 	
 		createBackground();
 	    createHUD();
 	    createPhysics();
 	    
-	    //levelCompleteWindow = new LevelCompleteWindow(score, vbom);
+	    levelCompleteWindow = new LevelCompleteWindow(score, vbom);
 	    
 		loadLevel(1);
 	    start();
 	    
 	    lifes = 0;
-		score = 0;
-		timeElapsed = 0;
+		score = new Score();
 		
 	    state = GameState.RUNNING;
     }
@@ -148,12 +146,12 @@ public class GameScene extends BaseScene implements GameStateManagement
         gameHUD.attachChild(scoreText);
         
         //Pause Button
-        pause_button = new ButtonSprite(25, cam_h-24, resourcesManager.pause_button_region, vbom);
+        pause_button = new ButtonSprite(25, cam_h-48, resourcesManager.pause_button_region, vbom);
         pause_button.setOnClickListener(setPauseButtonListener());
         gameHUD.attachChild(pause_button);
         
         //Reset Button
-        reset_button = new ButtonSprite(75, cam_h-24, resourcesManager.reset_button_region, vbom);
+        reset_button = new ButtonSprite(75, cam_h-48, resourcesManager.reset_button_region, vbom);
         reset_button.setOnClickListener(setResetButtonListener());
         gameHUD.attachChild(reset_button);
         
@@ -162,7 +160,7 @@ public class GameScene extends BaseScene implements GameStateManagement
 
     private void setScore(int score)
     {
-        this.score = score;
+        this.score.setScore(score);
         scoreText.setText(resourcesManager.getRessourcesString(R.string.score) + score);
     }
     
@@ -170,11 +168,18 @@ public class GameScene extends BaseScene implements GameStateManagement
     {
     	this.lifes = lifes;
     	//TODO ADD VISUAL HUD
+    	if(lifes <= 0){
+    		finish();
+    	}
     }
     
-    private void setTimeElapsed(long time)
+    /**
+     * Set time elapsed 
+     * @param time in seconds
+     */
+    private void setTimeElapsed(long time, boolean add)
     {
-    	this.timeElapsed = time;
+    	this.score.setTimeElapsed(time, add);
     	calculateScore();
     }
     
@@ -230,7 +235,13 @@ public class GameScene extends BaseScene implements GameStateManagement
     public Ball addBall(float x, float y, int color, double velocity, double direction){
     	Ball ball = new Ball(x, y, color, GameScene.this, physicsWorld){
 			@Override
-			public void onChanged() {
+			public void onRemoved() {
+				calculateScore();
+				GameScene.this.setLifes(GameScene.this.lifes - 1);
+			}
+
+			@Override
+			public void onSizeChanged() {
 				calculateScore();
 			}
         };
@@ -339,7 +350,7 @@ public class GameScene extends BaseScene implements GameStateManagement
     
     //TODO Doit bloquer l'action sur les balls et boutons HUD aussi
     public void pause() {
-    	setTimeElapsed(timeElapsed + System.currentTimeMillis() - startTime);
+    	setTimeElapsed(System.currentTimeMillis() - startTime, true);
     	Ball.pauseAllBalls();
     	camera.getHUD().unregisterTouchArea(pause_button);
     	camera.getHUD().unregisterTouchArea(reset_button);
@@ -364,12 +375,13 @@ public class GameScene extends BaseScene implements GameStateManagement
     }
     
     public void finish() 
-    {
-    	//levelCompleteWindow.display(this, camera);
+    {       
+    	pause();    	
+    	levelCompleteWindow.display(this, camera);
         camera.getHUD().setVisible(false);
         
         setIgnoreUpdate(true);
-    	pause();
+        
     	state = GameState.FINISHED;
     }
     

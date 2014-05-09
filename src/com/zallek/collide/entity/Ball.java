@@ -93,8 +93,8 @@ public abstract class Ball extends Sprite {
         });
     }
 	
-	public abstract void onChanged();
-	
+	public abstract void onRemoved();
+	public abstract void onSizeChanged();
 
 	/** Events **/
 	
@@ -129,24 +129,26 @@ public abstract class Ball extends Sprite {
 	static public void onBallCollision(Ball b1, Ball b2){
 		if(b1.type.equals(b2.type)) { //FUSION
 			b1.setSize(b1.size + b2.size);
-			b1.setLinearVelocity(b1.getLinearVelocity().add(b2.getLinearVelocity()));
-			b1.setPosition((b1.getX() + b2.getX())/2,(b1.getY() + b2.getY())/2);
-			b2.remove();
+			b1.fusionToBall(b2);
 		}
 		else {
 			if(b1.size >= b2.size){ //b2 is destroyed
 				b1.setSize(b1.size - b2.size);
-				b1.setLinearVelocity(b1.getLinearVelocity().add(b2.getLinearVelocity()));
-				b1.setPosition((b1.getX() + b2.getX())/2,(b1.getY() + b2.getY())/2);
-				b2.remove();
+				b1.fusionToBall(b2);
 			}
 			else { //b1 is destroyed
 				b2.setSize(b2.size - b1.size);
-				b2.setLinearVelocity(b2.getLinearVelocity().add(b1.getLinearVelocity()));
-				b2.setPosition((b1.getX() + b2.getX())/2,(b1.getY() + b2.getY())/2);
-				b1.remove();
+				b2.fusionToBall(b1);
 			}
 		}
+	}
+	
+	private void fusionToBall(Ball b2){
+		//this.linearVelocity = (this.linearVelocity.mul(0.6f)).add(b2.linearVelocity.mul(0.6f));
+		setLinearVelocity(this.getLinearVelocity().add(b2.getLinearVelocity()));
+		
+		this.setPosition((this.getX() + b2.getX())/2,(this.getY() + b2.getY())/2);
+		b2.remove();
 	}
 
 
@@ -180,7 +182,7 @@ public abstract class Ball extends Sprite {
 		this.dispose();
 		
 		System.gc();
-		onChanged();
+		onRemoved();
 	}
 	
 	
@@ -226,7 +228,7 @@ public abstract class Ball extends Sprite {
 			setScale((float) Math.sqrt(this.size*GameConstants.BALL_SCALE/Math.PI));
 		}
 		
-		onChanged();
+		onSizeChanged();
 	}
 
 	private void setType(int pABGRPackedInt){

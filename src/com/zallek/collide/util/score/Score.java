@@ -1,39 +1,28 @@
 package com.zallek.collide.util.score;
 
-import java.util.ArrayList;
-
 public class Score 
 {
-	private ArrayList<ScoreCap> scoreCap;
-	private int score;
+	public int score;
+	public long timeElapsed; //Sec
 	
 	public Score() {
-		scoreCap = new ArrayList<ScoreCap>();
-	}
-	
-	public void addCap(ScoreCap star) {
-		scoreCap.add(star);
-	}
-	
-	public void addCap(int num, int cap) {
-		scoreCap.add(new ScoreCap(num, cap));
+		score = 0;
+		timeElapsed = 0;
 	}
 	
 	public void setScore(int score) {
 		this.score = score;
 	}
 	
-	public int getScore() {
-		return this.score;
+    /**
+     * Set time elapsed 
+     * @param time in seconds
+     */
+	public void setTimeElapsed(long timeSec, boolean add) {
+		this.timeElapsed = add ? timeElapsed + timeSec : timeSec;
 	}
 	
-	public int getNumCap(){
-		int num = 0;
-		for(ScoreCap s : scoreCap) {
-			if(s.getNum() > num && s.getCap() <= score){
-				num = s.getNum();
-			}
-		}
-		return num;
+	public long getFinalScore(){
+		return score + timeElapsed/10;
 	}
 }
