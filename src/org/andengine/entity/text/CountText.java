@@ -84,7 +84,7 @@ public abstract class CountText extends Text {
 					setText(String.valueOf(intCurrent));
 				}
 				if(this.intCurrent <= intTo){
-					stop = true;
+					this.stop = true;
 					onFinished();
 				}
 			}
@@ -94,7 +94,7 @@ public abstract class CountText extends Text {
 					setText(String.valueOf(intCurrent));
 				}
 				if(this.intCurrent >= intTo){
-					stop = true;
+					this.stop = true;
 					onFinished();
 				}
 			}

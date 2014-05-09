@@ -1,10 +1,10 @@
 package com.zallek.collide.scene;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 import org.andengine.engine.camera.hud.HUD;
-import org.andengine.engine.handler.timer.ITimerCallback;
-import org.andengine.engine.handler.timer.TimerHandler;
+import org.andengine.engine.handler.IUpdateHandler;
 import org.andengine.entity.IEntity;
 import org.andengine.entity.modifier.MoveModifier;
 import org.andengine.entity.modifier.ScaleModifier;
@@ -24,7 +24,10 @@ import org.andengine.util.level.IEntityLoader;
 import org.andengine.util.level.LevelLoader;
 import org.xml.sax.Attributes;
 
+import android.util.Log;
+
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.ContactImpulse;
 import com.badlogic.gdx.physics.box2d.ContactListener;
@@ -40,7 +43,6 @@ import com.zallek.collide.manager.SceneManager.SceneType;
 import com.zallek.collide.util.constants.GameConstants;
 import com.zallek.collide.util.constants.XmlLevelConstants;
 import com.zallek.collide.util.game.GameStateManagement;
-import com.zallek.collide.util.score.Score;
 import com.zallek.collide.scene.GameScene;
 
 public class GameScene extends BaseScene implements GameStateManagement
@@ -103,6 +105,7 @@ public class GameScene extends BaseScene implements GameStateManagement
     	physicsWorld = new PhysicsWorld(new Vector2(0, 0), false);
         physicsWorld.setContactListener(setContactListener());
         registerUpdateHandler(physicsWorld);
+        registerUpdateHandler(deadBodiesHandler());
     }
 
     @Override
@@ -259,6 +262,7 @@ public class GameScene extends BaseScene implements GameStateManagement
     {
         ContactListener contactListener = new ContactListener()
         {
+        	@Override
             public void beginContact(Contact contact)
             {
                 final Object x1 = contact.getFixtureA().getBody().getUserData();
@@ -270,26 +274,60 @@ public class GameScene extends BaseScene implements GameStateManagement
 	            }
             }
 
-            public void endContact(Contact contact){}
+        	@Override
+            public void endContact(Contact contact){
+        		
+        	}
 
 			@Override
-			public void preSolve(Contact contact, Manifold oldManifold){}
+			public void preSolve(Contact contact, Manifold oldManifold){
+			}
 
 			@Override
-			public void postSolve(Contact contact, ContactImpulse impulse){}
+			public void postSolve(Contact contact, ContactImpulse impulse){
+			}
         };
         return contactListener;
     }
     
+    private IUpdateHandler deadBodiesHandler(){
+    	return new IUpdateHandler(){
+
+			@Override
+			public void onUpdate(float pSecondsElapsed) {
+				if(!physicsWorld.isLocked()){
+					for (Iterator<Body> iter = physicsWorld.getBodies(); iter.hasNext();) {
+						Body body = iter.next();
+						if(body!=null) {
+							Ball data = (Ball) body.getUserData();
+							if(data.isFlaggedForDelete) {
+								physicsWorld.destroyBody(body);
+								body.setUserData(null);
+								body = null;
+								Log.d("Body", "Body deleted");
+							}
+					    }
+					}
+				}
+			}
+
+			@Override
+			public void reset() {
+			}
+    	};
+    }
+
     
     //**** Game activity management ****//
     
     public void start() {
-    	timeText = new CountText(0, 0, resourcesManager.font, GameConstants.GAME_START_WAIT, 0, new CountTextOptions(), vbom){
+    	timeText = new CountText(0, 0, resourcesManager.font, GameConstants.GAME_START_WAIT, -1, new CountTextOptions(), vbom){
 			@Override
 			public void onFinished() {
-				timeText.setVisible(false);
-				resume();
+				GameScene.this.resume();
+				GameScene.this.timeText.setVisible(false);
+				GameScene.this.detachChild(timeText);
+				this.dispose();
 			}
         };
         timeText.setPosition(camera.getCenterX(), camera.getCenterY());

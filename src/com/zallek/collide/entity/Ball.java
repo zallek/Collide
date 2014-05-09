@@ -17,12 +17,14 @@ import org.andengine.util.math.MathUtils;
 import android.util.Log;
 
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
-import com.badlogic.gdx.physics.box2d.BodyPolar;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.zallek.collide.manager.ResourcesManager;
 import com.zallek.collide.scene.GameScene;
 import com.zallek.collide.util.constants.GameConstants;
+import com.zallek.collide.util.math.CartesianCoordinates;
+import com.zallek.collide.util.math.MathTrigo;
 
 public abstract class Ball extends Sprite {
 	
@@ -36,7 +38,9 @@ public abstract class Ball extends Sprite {
 	private Vector2 linearVelocity = new Vector2();
 	
 	private Line lineDirection;
-	private BodyPolar body;
+	private Body body;
+	
+	public boolean isFlaggedForDelete = false;
 	
 	private int size = 0;
 	private Color type;
@@ -67,9 +71,9 @@ public abstract class Ball extends Sprite {
 	
 	private void createPhysics(final Camera camera, PhysicsWorld physicsWorld)
     {        
-		body = new BodyPolar(PhysicsFactory.createCircleBody(physicsWorld, this, BodyType.DynamicBody, FIXTURE_DEF));
+		body = PhysicsFactory.createCircleBody(physicsWorld, this, BodyType.DynamicBody, FIXTURE_DEF);
 		body.setUserData(this);
-		this.setUserData(body);
+		//this.setUserData(body);
         
         physicsWorld.registerPhysicsConnector(new PhysicsConnector(this, body, true, false)
         {
@@ -152,13 +156,14 @@ public abstract class Ball extends Sprite {
 	public void pause() {		
 		linearVelocity = body.getLinearVelocity();
 		body.setLinearVelocity(0, 0);
-		body.setAwake(false);
+		body.setAwake(true);
 		scene.unregisterTouchArea(this);
 	}
 	
 	public void resume() {
-		body.setAwake(true);
+		body.setAwake(false);
 		body.setLinearVelocity(linearVelocity);
+		Log.i("Ball resume","velocity : " + linearVelocity);
 		scene.registerTouchArea(this);
 	}
 	
@@ -166,7 +171,7 @@ public abstract class Ball extends Sprite {
 		final PhysicsConnector facePhysicsConnector = physicsWorld.getPhysicsConnectorManager().findPhysicsConnectorByShape(this);
 
 		physicsWorld.unregisterPhysicsConnector(facePhysicsConnector);
-		physicsWorld.destroyBody(facePhysicsConnector.getBody());
+		isFlaggedForDelete = true;
 
 		scene.unregisterTouchArea(this);
 		scene.detachChild(this);
@@ -181,8 +186,16 @@ public abstract class Ball extends Sprite {
 	
 	/** Getters & Setters **/
 	
+	public double getVelocity(){
+		return Math.sqrt(Math.pow(getLinearVelocity().x, 2) + Math.pow(getLinearVelocity().y, 2));
+	}
+	
 	public void setAngle(float x, float y){
-		body.setAngle(x, y);
+		setAngle(MathTrigo.cartesianToAngle(x, y));
+	}
+	
+	public void setAngle(double angle){
+		setLinearVelocity(this.getVelocity(), angle);
 	}
 	
 	public Vector2 getLinearVelocity(){
@@ -194,7 +207,8 @@ public abstract class Ball extends Sprite {
 	}
 	
 	public void setLinearVelocity(double velocity, double angle){
-		body.setLinearVelocity(velocity, angle);
+		CartesianCoordinates cc = MathTrigo.polarToCatesian(velocity, angle);
+		body.setLinearVelocity((float)cc.x, (float)cc.y);
 	}
 
 	
@@ -210,7 +224,6 @@ public abstract class Ball extends Sprite {
 		}
 		else {
 			setScale((float) Math.sqrt(this.size*GameConstants.BALL_SCALE/Math.PI));
-			Log.d("setSize", "Ball new size : " + size);
 		}
 		
 		onChanged();
